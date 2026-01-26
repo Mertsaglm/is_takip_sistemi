@@ -19,31 +19,31 @@ export default function CustomerCard({ tamirci }: { tamirci: Tamirci }) {
   return (
     <Link
       href={`/tamirci/${tamirci.id}`}
-      className="group block bg-white border-2 border-grid-line rounded-lg p-6 hover:border-accent-blue hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+      className="group block bg-white border-2 border-grid-line rounded-lg p-4 sm:p-6 hover:border-accent-blue hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
     >
-      <div className="flex items-start justify-between mb-4">
-        <h3 className="text-2xl font-mono font-bold text-ink-black group-hover:text-accent-blue transition-colors">
+      <div className="flex items-start justify-between mb-3 sm:mb-4">
+        <h3 className="text-xl sm:text-2xl font-mono font-bold text-ink-black group-hover:text-accent-blue transition-colors">
           {tamirci.ad_soyad}
         </h3>
-        <ArrowRight className="w-5 h-5 text-ink-black/40 group-hover:text-accent-blue group-hover:translate-x-1 transition-all" />
+        <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-ink-black/40 group-hover:text-accent-blue group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" />
       </div>
       
       {tamirci.telefon && (
-        <div className="flex items-center gap-2 text-ink-black/60 mb-4">
-          <Phone className="w-4 h-4" />
-          <span className="font-mono text-sm">{tamirci.telefon}</span>
+        <div className="flex items-center gap-2 text-ink-black/60 mb-3 sm:mb-4">
+          <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <span className="font-mono text-xs sm:text-sm">{tamirci.telefon}</span>
         </div>
       )}
       
-      <div className="flex items-baseline justify-between pt-4 border-t border-grid-line">
-        <span className="text-sm text-ink-black/60 font-semibold uppercase tracking-wide">{label}</span>
-        <span className={`text-3xl font-mono font-bold ${borcColor}`}>
+      <div className="flex items-baseline justify-between pt-3 sm:pt-4 border-t border-grid-line">
+        <span className="text-xs sm:text-sm text-ink-black/60 font-semibold uppercase tracking-wide">{label}</span>
+        <span className={`text-2xl sm:text-3xl font-mono font-bold ${borcColor}`}>
           {formatCurrency(displayAmount)}
         </span>
       </div>
       
       {tamirci.son_islem_tarihi && (
-        <div className="flex items-center gap-2 text-xs text-ink-black/40 mt-4">
+        <div className="flex items-center gap-2 text-xs text-ink-black/40 mt-3 sm:mt-4">
           <Calendar className="w-3 h-3" />
           <span>Son işlem: {formatDate(tamirci.son_islem_tarihi)}</span>
         </div>

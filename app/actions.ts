@@ -160,3 +160,67 @@ export async function kapaPozisyon(isId: string, tamirciId: string) {
   revalidatePath(`/tamirci/${tamirciId}`)
   revalidatePath('/')
 }
+
+export async function deleteTransaction(islemId: string, tamirciId: string) {
+  const supabase = await createServerSupabaseClient()
+  
+  // İşlemi ve ilişkili verileri al
+  const { data: islem, error: fetchError } = await supabase
+    .from('islem_gecmisi')
+    .select('*, odemeler:is_odemeleri(*)')
+    .eq('id', islemId)
+    .single()
+  
+  if (fetchError || !islem) throw new Error('İşlem bulunamadı')
+  
+  // Tamircinin mevcut toplam borcunu al
+  const { data: tamirci, error: tamirciError } = await supabase
+    .from('tamirciler')
+    .select('toplam_borc')
+    .eq('id', tamirciId)
+    .single()
+  
+  if (tamirciError || !tamirci) throw new Error('Tamirci bulunamadı')
+  
+  // Toplam borcu yeniden hesapla
+  let yeniToplamBorc = tamirci.toplam_borc
+  
+  if (islem.islem_tipi === 'IS') {
+    // İş siliniyorsa: toplam borçtan kalan borcu düş
+    yeniToplamBorc -= (islem.kalan_borc || 0)
+  } else {
+    // Ödeme siliniyorsa: toplam borca ödeme tutarını ekle (ödeme geri alınıyor)
+    yeniToplamBorc += islem.tutar
+  }
+  
+  // İş ödemelerini sil (varsa)
+  if (islem.islem_tipi === 'IS' && islem.odemeler && islem.odemeler.length > 0) {
+    const { error: odemeDeleteError } = await supabase
+      .from('is_odemeleri')
+      .delete()
+      .eq('is_id', islemId)
+    
+    if (odemeDeleteError) throw odemeDeleteError
+  }
+  
+  // İşlemi sil
+  const { error: deleteError } = await supabase
+    .from('islem_gecmisi')
+    .delete()
+    .eq('id', islemId)
+  
+  if (deleteError) throw deleteError
+  
+  // Tamircinin toplam borcunu güncelle
+  const { error: updateError } = await supabase
+    .from('tamirciler')
+    .update({ toplam_borc: yeniToplamBorc })
+    .eq('id', tamirciId)
+  
+  if (updateError) throw updateError
+  
+  revalidatePath(`/tamirci/${tamirciId}`)
+  revalidatePath('/')
+  
+  return { success: true, yeniToplamBorc }
+}

@@ -62,31 +62,31 @@ export default function IsPaymentModal({ islem, tamirciId, onClose }: IsPaymentM
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg p-8 max-w-md w-full border-2 border-grid-line shadow-xl">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-3xl font-mono font-bold text-ink-black">İşe Ödeme</h2>
+      <div className="bg-white rounded-lg p-4 sm:p-6 md:p-8 max-w-md w-full border-2 border-grid-line shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <h2 className="text-2xl sm:text-3xl font-mono font-bold text-ink-black">İşe Ödeme</h2>
           <button
             onClick={onClose}
             className="text-ink-black/60 hover:text-ink-black transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
 
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-grid-line">
-          <p className="text-sm text-ink-black/60 mb-1">İş Açıklaması</p>
-          <p className="font-semibold text-ink-black mb-3">{islem.aciklama}</p>
+        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-gray-50 rounded-lg border border-grid-line">
+          <p className="text-xs sm:text-sm text-ink-black/60 mb-1">İş Açıklaması</p>
+          <p className="font-semibold text-sm sm:text-base text-ink-black mb-2 sm:mb-3">{islem.aciklama}</p>
           
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center gap-4">
             <div>
               <p className="text-xs text-ink-black/60">Toplam Tutar</p>
-              <p className="text-lg font-mono font-bold text-ink-black">
+              <p className="text-base sm:text-lg font-mono font-bold text-ink-black">
                 {formatCurrency(islem.tutar)}
               </p>
             </div>
             <div className="text-right">
               <p className="text-xs text-ink-black/60">Kalan Borç</p>
-              <p className="text-2xl font-mono font-bold text-debt-red">
+              <p className="text-xl sm:text-2xl font-mono font-bold text-debt-red">
                 {formatCurrency(kalanBorc)}
               </p>
             </div>
@@ -95,7 +95,7 @@ export default function IsPaymentModal({ islem, tamirciId, onClose }: IsPaymentM
 
         <form onSubmit={handlePayment} className="space-y-4 mb-4">
           <div>
-            <label htmlFor="tutar" className="block text-sm font-semibold text-ink-black mb-2 uppercase tracking-wide">
+            <label htmlFor="tutar" className="block text-xs sm:text-sm font-semibold text-ink-black mb-2 uppercase tracking-wide">
               Ödeme Tutarı (₺) *
             </label>
             <input
@@ -107,7 +107,7 @@ export default function IsPaymentModal({ islem, tamirciId, onClose }: IsPaymentM
               max={kalanBorc}
               step="0.01"
               autoFocus
-              className="w-full px-4 py-3 text-2xl font-mono border-2 border-grid-line rounded-lg focus:outline-none focus:border-accent-blue transition-colors"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 text-xl sm:text-2xl font-mono border-2 border-grid-line rounded-lg focus:outline-none focus:border-accent-blue transition-colors"
               placeholder="0.00"
             />
             <p className="text-xs text-ink-black/60 mt-1">
@@ -116,14 +116,14 @@ export default function IsPaymentModal({ islem, tamirciId, onClose }: IsPaymentM
           </div>
 
           <div>
-            <label htmlFor="aciklama" className="block text-sm font-semibold text-ink-black mb-2 uppercase tracking-wide">
+            <label htmlFor="aciklama" className="block text-xs sm:text-sm font-semibold text-ink-black mb-2 uppercase tracking-wide">
               Not (İsteğe Bağlı)
             </label>
             <input
               type="text"
               id="aciklama"
               name="aciklama"
-              className="w-full px-4 py-3 text-lg border-2 border-grid-line rounded-lg focus:outline-none focus:border-accent-blue transition-colors"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg border-2 border-grid-line rounded-lg focus:outline-none focus:border-accent-blue transition-colors"
               placeholder="Örn: Nakit ödeme"
             />
           </div>
@@ -132,16 +132,16 @@ export default function IsPaymentModal({ islem, tamirciId, onClose }: IsPaymentM
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 border-2 border-grid-line text-ink-black rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+              className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border-2 border-grid-line text-ink-black rounded-lg font-semibold hover:bg-gray-50 transition-colors text-sm sm:text-base"
             >
               İptal
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 px-4 py-3 bg-payment-green hover:bg-payment-green/90 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-payment-green hover:bg-payment-green/90 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
             >
-              <DollarSign className="w-5 h-5" />
+              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
               {isLoading ? 'Kaydediliyor...' : 'Ödeme Al'}
             </button>
           </div>
@@ -151,10 +151,11 @@ export default function IsPaymentModal({ islem, tamirciId, onClose }: IsPaymentM
           <button
             onClick={handleKapaPozisyon}
             disabled={isLoading}
-            className="w-full px-4 py-3 bg-accent-blue hover:bg-accent-blue/90 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-accent-blue hover:bg-accent-blue/90 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
           >
-            <CheckCircle className="w-5 h-5" />
-            Pozisyonu Kapat (Borç Affı)
+            <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden min-[480px]:inline">Pozisyonu Kapat (Borç Affı)</span>
+            <span className="min-[480px]:hidden">Borç Affı</span>
           </button>
           <p className="text-xs text-ink-black/60 text-center mt-2">
             Kalan {formatCurrency(kalanBorc)} affedilir ve iş kapatılır

@@ -23,18 +23,18 @@ export default async function HomePage({
   const { data: tamirciler } = await query
   
   return (
-    <main className="min-h-screen p-8 bg-ledger-paper">
+    <main className="min-h-screen p-4 sm:p-6 md:p-8 bg-ledger-paper">
       <div className="max-w-7xl mx-auto">
-        <header className="mb-12">
-          <h1 className="text-6xl font-mono font-bold mb-3 text-ink-black">
+        <header className="mb-6 sm:mb-8 md:mb-12">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-mono font-bold mb-2 sm:mb-3 text-ink-black">
             İş Takip Sistemi
           </h1>
-          <p className="text-xl text-ink-black/60">
+          <p className="text-base sm:text-lg md:text-xl text-ink-black/60">
             Tamirci borç-alacak takibi
           </p>
         </header>
         
-        <div className="flex gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="flex-1">
             <SearchBar initialValue={params.q} />
           </div>

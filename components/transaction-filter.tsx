@@ -19,7 +19,7 @@ export default function TransactionFilter({ activeFilter, onFilterChange }: Tran
   ]
 
   return (
-    <div className="bg-white border-2 border-grid-line rounded-lg p-4 mb-4 shadow-sm">
+    <div className="bg-white border-2 border-grid-line rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 shadow-sm">
       <div className="flex flex-wrap gap-2">
         {filters.map((filter) => {
           const Icon = filter.icon
@@ -30,15 +30,15 @@ export default function TransactionFilter({ activeFilter, onFilterChange }: Tran
               key={filter.id}
               onClick={() => onFilterChange(filter.id)}
               className={`
-                flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all
+                flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all
                 ${isActive 
                   ? 'bg-accent-blue text-white shadow-md' 
                   : 'bg-gray-100 text-ink-black hover:bg-gray-200'
                 }
               `}
             >
-              <Icon className="w-4 h-4" />
-              {filter.label}
+              <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="whitespace-nowrap">{filter.label}</span>
             </button>
           )
         })}

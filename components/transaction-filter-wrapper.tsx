@@ -46,8 +46,8 @@ export default function TransactionFilterWrapper({ islemler, tamirciId }: Transa
       />
       
       <div className="bg-white border-2 border-grid-line rounded-lg overflow-hidden shadow-sm">
-        <div className="bg-ink-black text-white px-8 py-5">
-          <h2 className="text-3xl font-mono font-bold">İşlem Geçmişi</h2>
+        <div className="bg-ink-black text-white px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-mono font-bold">İşlem Geçmişi</h2>
         </div>
         <TransactionList islemler={filteredIslemler} tamirciId={tamirciId} />
       </div>

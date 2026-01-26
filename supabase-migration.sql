@@ -20,7 +20,7 @@ WHERE islem_tipi = 'ODEME';
 CREATE TABLE IF NOT EXISTS is_odemeleri (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  is_id UUID NOT NULL REFERENCES islem_gecmisi(id) ON DELETE RESTRICT,
+  is_id UUID NOT NULL REFERENCES islem_gecmisi(id) ON DELETE CASCADE,
   tutar DECIMAL(10,2) NOT NULL CHECK (tutar > 0),
   aciklama TEXT
 );
@@ -35,14 +35,34 @@ DROP POLICY IF EXISTS "Herkes okuyabilir" ON is_odemeleri;
 DROP POLICY IF EXISTS "Herkes ekleyebilir" ON is_odemeleri;
 DROP POLICY IF EXISTS "Kimse silemez" ON is_odemeleri;
 DROP POLICY IF EXISTS "Kimse güncelleyemez" ON is_odemeleri;
+DROP POLICY IF EXISTS "Herkes silebilir" ON is_odemeleri;
 
 CREATE POLICY "Herkes okuyabilir" ON is_odemeleri FOR SELECT USING (true);
 CREATE POLICY "Herkes ekleyebilir" ON is_odemeleri FOR INSERT WITH CHECK (true);
-CREATE POLICY "Kimse silemez" ON is_odemeleri FOR DELETE USING (false);
+CREATE POLICY "Herkes silebilir" ON is_odemeleri FOR DELETE USING (true);
 CREATE POLICY "Kimse güncelleyemez" ON is_odemeleri FOR UPDATE USING (false);
 
--- İşlem geçmişi tablosunu güncellenebilir yap (kalan_borc ve pozisyon_kapali için)
+-- İşlem geçmişi tablosunu güncellenebilir ve silinebilir yap
 DROP POLICY IF EXISTS "Kimse güncelleyemez" ON islem_gecmisi;
+DROP POLICY IF EXISTS "Kimse silemez" ON islem_gecmisi;
+DROP POLICY IF EXISTS "Herkes silebilir" ON islem_gecmisi;
+
 CREATE POLICY "Sadece kalan_borc ve pozisyon_kapali güncellenebilir" ON islem_gecmisi 
 FOR UPDATE USING (true) 
 WITH CHECK (true);
+
+CREATE POLICY "Herkes silebilir" ON islem_gecmisi 
+FOR DELETE USING (true);
+
+
+-- Mevcut foreign key constraint'i CASCADE delete ile güncelle
+-- Önce mevcut constraint'i kaldır
+ALTER TABLE is_odemeleri 
+DROP CONSTRAINT IF EXISTS is_odemeleri_is_id_fkey;
+
+-- Yeni constraint'i CASCADE ile ekle
+ALTER TABLE is_odemeleri 
+ADD CONSTRAINT is_odemeleri_is_id_fkey 
+FOREIGN KEY (is_id) 
+REFERENCES islem_gecmisi(id) 
+ON DELETE CASCADE;

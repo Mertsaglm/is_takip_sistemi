@@ -18,3 +18,14 @@ body {
   font-family: var(--font-sans);
   font-feature-settings: "tnum" 1;
 }
+
+/* Mobil için touch-friendly optimizasyonlar */
+@media (max-width: 1024px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+}

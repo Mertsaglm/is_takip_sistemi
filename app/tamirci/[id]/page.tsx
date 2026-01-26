@@ -60,39 +60,39 @@ export default async function TamirciPage({
   const displayAmount = tamirci.toplam_borc < 0 ? Math.abs(tamirci.toplam_borc) : tamirci.toplam_borc
   
   return (
-    <main className="min-h-screen p-8 bg-ledger-paper">
+    <main className="min-h-screen p-4 sm:p-6 md:p-8 bg-ledger-paper">
       <div className="max-w-7xl mx-auto">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-ink-black/60 hover:text-ink-black mb-8 transition-colors text-lg"
+          className="inline-flex items-center gap-2 text-ink-black/60 hover:text-ink-black mb-4 sm:mb-6 md:mb-8 transition-colors text-base sm:text-lg"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           <span>Geri Dön</span>
         </Link>
         
-        <div className="bg-white border-2 border-grid-line rounded-lg p-8 mb-8 shadow-sm">
-          <div className="flex items-start justify-between mb-8">
-            <div>
-              <h1 className="text-5xl font-mono font-bold text-ink-black mb-3">
+        <div className="bg-white border-2 border-grid-line rounded-lg p-4 sm:p-6 md:p-8 mb-6 sm:mb-8 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-mono font-bold text-ink-black mb-2 sm:mb-3 break-words">
                 {tamirci.ad_soyad}
               </h1>
               {tamirci.telefon && (
-                <div className="flex items-center gap-2 text-xl text-ink-black/60">
-                  <Phone className="w-5 h-5" />
+                <div className="flex items-center gap-2 text-base sm:text-lg md:text-xl text-ink-black/60">
+                  <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span className="font-mono">{tamirci.telefon}</span>
                 </div>
               )}
             </div>
             
-            <div className={`border-2 rounded-lg px-8 py-5 ${borcColor} shadow-sm`}>
-              <p className="text-sm font-semibold mb-1 uppercase tracking-wide">{borcLabel}</p>
-              <p className="text-5xl font-mono font-bold">
+            <div className={`border-2 rounded-lg px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 ${borcColor} shadow-sm flex-shrink-0`}>
+              <p className="text-xs sm:text-sm font-semibold mb-1 uppercase tracking-wide">{borcLabel}</p>
+              <p className="text-3xl sm:text-4xl md:text-5xl font-mono font-bold">
                 {formatCurrency(displayAmount)}
               </p>
             </div>
           </div>
           
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <TransactionForm
               tamirciId={tamirci.id}
               type="IS"
