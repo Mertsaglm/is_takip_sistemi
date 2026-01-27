@@ -224,3 +224,26 @@ export async function deleteTransaction(islemId: string, tamirciId: string) {
   
   return { success: true, yeniToplamBorc }
 }
+
+export async function deleteTamirci(tamirciId: string) {
+  const supabase = await createServerSupabaseClient()
+  
+  // CASCADE delete sayesinde tamirciyi silince:
+  // 1. Tüm islem_gecmisi kayıtları silinir
+  // 2. Her işlem silinince is_odemeleri kayıtları da silinir
+  // Tek bir delete yeterli!
+  
+  const { error } = await supabase
+    .from('tamirciler')
+    .delete()
+    .eq('id', tamirciId)
+  
+  if (error) {
+    console.error('Tamirci silme hatası:', error)
+    throw new Error(`Tamirci silinirken hata oluştu: ${error.message}`)
+  }
+  
+  revalidatePath('/')
+  
+  return { success: true }
+}

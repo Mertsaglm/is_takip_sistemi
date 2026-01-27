@@ -11,16 +11,25 @@ export default async function HomePage({
   const params = await searchParams
   const supabase = await createServerSupabaseClient()
   
+  // son_islem_tarihi null ise created_at kullan, böylece yeni tamirciler de üstte görünür
   let query = supabase
     .from('tamirciler')
     .select('*')
-    .order('son_islem_tarihi', { ascending: false, nullsFirst: false })
   
   if (params.q) {
     query = query.ilike('ad_soyad', `%${params.q}%`)
   }
   
-  const { data: tamirciler } = await query
+  let { data: tamirciler } = await query
+  
+  // Client-side sıralama: son_islem_tarihi varsa onu, yoksa created_at kullan
+  if (tamirciler) {
+    tamirciler = tamirciler.sort((a, b) => {
+      const dateA = a.son_islem_tarihi || a.created_at
+      const dateB = b.son_islem_tarihi || b.created_at
+      return new Date(dateB).getTime() - new Date(dateA).getTime()
+    })
+  }
   
   return (
     <main className="min-h-screen p-4 sm:p-6 md:p-8 bg-ledger-paper">
