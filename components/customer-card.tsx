@@ -7,7 +7,61 @@ import { Phone, Calendar, ArrowRight, Trash2 } from 'lucide-react'
 import { pasifTamirci } from '@/app/actions'
 import { useState } from 'react'
 
-export default function CustomerCard({ tamirci }: { tamirci: Tamirci }) {
+// Türkçe karakterleri normalize et
+function normalizeTurkish(text: string): string {
+  return text
+    .toLocaleLowerCase('tr-TR')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ı/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+}
+
+// Arama highlight fonksiyonu
+function highlightMatch(text: string, query: string): React.ReactNode {
+  if (!query || query.length < 2) return text
+
+  const normalizedText = normalizeTurkish(text)
+  const normalizedQuery = normalizeTurkish(query)
+
+  // Query'nin her kelimesini ara
+  const words = query.trim().split(/\s+/).filter(w => w.length >= 2)
+
+  if (words.length === 0) return text
+
+  // En iyi eşleşmeyi bul
+  for (const word of words) {
+    const normalizedWord = normalizeTurkish(word)
+    const matchIdx = normalizedText.indexOf(normalizedWord)
+
+    if (matchIdx !== -1) {
+      const before = text.substring(0, matchIdx)
+      const match = text.substring(matchIdx, matchIdx + word.length)
+      const after = text.substring(matchIdx + word.length)
+
+      return (
+        <>
+          {before}
+          <span className="bg-yellow-300/70 text-ink-black px-0.5 rounded">
+            {match}
+          </span>
+          {after}
+        </>
+      )
+    }
+  }
+
+  return text
+}
+
+interface CustomerCardProps {
+  tamirci: Tamirci
+  highlightText?: string
+}
+
+export default function CustomerCard({ tamirci, highlightText }: CustomerCardProps) {
   const [showConfirm, setShowConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const bakiye = tamirci.toplam_borc
@@ -57,7 +111,7 @@ export default function CustomerCard({ tamirci }: { tamirci: Tamirci }) {
       >
         <div className="flex items-start justify-between mb-3 sm:mb-4 pr-8">
           <h3 className="text-xl sm:text-2xl font-mono font-bold text-ink-black group-hover:text-accent-blue transition-colors">
-            {tamirci.ad_soyad}
+            {highlightText ? highlightMatch(tamirci.ad_soyad, highlightText) : tamirci.ad_soyad}
           </h3>
           <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-ink-black/40 group-hover:text-accent-blue group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" />
         </div>
