@@ -2,36 +2,46 @@
 
 import { Islem } from '@/types/database'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { TrendingUp, TrendingDown, CheckCircle2, Trash2 } from 'lucide-react'
+import { TrendingUp, TrendingDown, CheckCircle2, XCircle, Ban } from 'lucide-react'
 import { useState, Fragment } from 'react'
 import IsPaymentModal from './is-payment-modal'
-import { deleteTransaction } from '@/app/actions'
+import { iptalTransaction } from '@/app/actions'
 
-export default function TransactionList({ 
-  islemler, 
-  tamirciId 
-}: { 
+export default function TransactionList({
+  islemler,
+  tamirciId,
+  showIptalEdilen = true
+}: {
   islemler: Islem[]
   tamirciId: string
+  showIptalEdilen?: boolean
 }) {
   const [selectedIs, setSelectedIs] = useState<Islem | null>(null)
-  const [deleteConfirm, setDeleteConfirm] = useState<Islem | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [iptalConfirm, setIptalConfirm] = useState<Islem | null>(null)
+  const [iptalNedeni, setIptalNedeni] = useState('')
+  const [isIptalEtme, setIsIptalEtme] = useState(false)
 
-  async function handleDelete(islem: Islem) {
-    setIsDeleting(true)
+  // İptal edilenleri filtrele (opsiyonel)
+  const filteredIslemler = showIptalEdilen
+    ? islemler
+    : islemler.filter(i => i.islem_durumu !== 'IPTAL')
+
+  async function handleIptal(islem: Islem) {
+    setIsIptalEtme(true)
     try {
-      await deleteTransaction(islem.id, tamirciId)
-      setDeleteConfirm(null)
+      // iptalNedeni boş olabilir (opsiyonel)
+      await iptalTransaction(islem.id, tamirciId, iptalNedeni || '')
+      setIptalConfirm(null)
+      setIptalNedeni('')
     } catch (error) {
-      console.error('Silme hatası:', error)
-      alert('İşlem silinirken hata oluştu')
+      console.error('İptal hatası:', error)
+      alert('İşlem iptal edilirken hata oluştu')
     } finally {
-      setIsDeleting(false)
+      setIsIptalEtme(false)
     }
   }
 
-  if (islemler.length === 0) {
+  if (filteredIslemler.length === 0) {
     return (
       <div className="p-8 sm:p-12 text-center">
         <p className="text-xl sm:text-2xl text-ink-black/40 font-mono">
@@ -45,29 +55,58 @@ export default function TransactionList({
     <>
       {/* Mobil görünüm - Kartlar */}
       <div className="block lg:hidden space-y-4">
-        {islemler.map((islem) => {
+        {filteredIslemler.map((islem) => {
           const isDebt = islem.islem_tipi === 'IS'
           const kalanBorc = islem.kalan_borc || 0
           const isPaid = islem.pozisyon_kapali || kalanBorc <= 0
-          const hasPayments = islem.odemeler && islem.odemeler.length > 0
-          
-          const rowColor = isPaid && isDebt 
-            ? 'bg-payment-green/10' 
-            : isDebt 
-            ? 'bg-debt-red/5' 
-            : 'bg-payment-green/5'
-          
-          const textColor = isPaid && isDebt
-            ? 'text-payment-green'
-            : isDebt 
-            ? 'text-debt-red' 
-            : 'text-payment-green'
-          
+          const hasPayments = islem.odemeler && islem.odemeler.filter(o => o.islem_durumu === 'AKTIF').length > 0
+          const isIptal = islem.islem_durumu === 'IPTAL'
+
+          // İptal edilen işlemler için özel stil
+          const rowColor = isIptal
+            ? 'bg-gray-100 border-gray-300'
+            : isPaid && isDebt
+              ? 'bg-payment-green/10'
+              : isDebt
+                ? 'bg-debt-red/5'
+                : 'bg-payment-green/5'
+
+          const textColor = isIptal
+            ? 'text-gray-400'
+            : isPaid && isDebt
+              ? 'text-payment-green'
+              : isDebt
+                ? 'text-debt-red'
+                : 'text-payment-green'
+
           return (
-            <div key={islem.id} className={`${rowColor} border-2 border-grid-line rounded-lg p-4 ${isPaid && isDebt ? 'opacity-75' : ''}`}>
+            <div
+              key={islem.id}
+              className={`${rowColor} border-2 border-grid-line rounded-lg p-4 ${isIptal ? 'opacity-60' : ''} ${isPaid && isDebt && !isIptal ? 'opacity-75' : ''}`}
+            >
+              {/* İptal Badge */}
+              {isIptal && (
+                <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-gray-200 rounded-lg">
+                  <Ban className="w-4 h-4 text-gray-500" />
+                  <span className="text-xs font-semibold text-gray-600 uppercase">İptal Edildi</span>
+                  {islem.iptal_tarihi && (
+                    <span className="text-xs text-gray-500 ml-auto font-mono">
+                      {formatDate(islem.iptal_tarihi)}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* İptal Nedeni */}
+              {isIptal && islem.iptal_nedeni && (
+                <div className="mb-3 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                  <strong>Neden:</strong> {islem.iptal_nedeni}
+                </div>
+              )}
+
               {/* Başlık ve Tip */}
               <div className="flex items-start justify-between mb-3">
-                <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${textColor} font-semibold text-sm`}>
+                <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${textColor} font-semibold text-sm ${isIptal ? 'line-through' : ''}`}>
                   {isDebt ? (
                     <>
                       <TrendingUp className="w-4 h-4" />
@@ -88,21 +127,21 @@ export default function TransactionList({
               {/* Açıklama */}
               <div className="mb-3">
                 <div className="flex items-center gap-2">
-                  <span className={`text-base ${isPaid && isDebt ? 'line-through text-ink-black/60' : 'text-ink-black'}`}>
+                  <span className={`text-base ${isIptal || (isPaid && isDebt) ? 'line-through text-ink-black/60' : 'text-ink-black'}`}>
                     {islem.aciklama}
                   </span>
-                  {isPaid && isDebt && (
+                  {!isIptal && isPaid && isDebt && (
                     <span className="inline-flex items-center gap-1 px-2 py-1 bg-payment-green text-white rounded-full text-xs font-bold">
                       <CheckCircle2 className="w-3 h-3" />
                       ÖDENDİ
                     </span>
                   )}
                 </div>
-                
+
                 {/* Ödemeler */}
-                {hasPayments && (
+                {hasPayments && !isIptal && (
                   <div className="mt-2 space-y-1">
-                    {islem.odemeler!.map((odeme) => (
+                    {islem.odemeler!.filter(o => o.islem_durumu === 'AKTIF').map((odeme) => (
                       <div
                         key={odeme.id}
                         className="flex items-center gap-2 text-xs text-payment-green/80"
@@ -123,7 +162,7 @@ export default function TransactionList({
                       <span>Toplam Ödenen:</span>
                       <span className="font-mono">
                         {formatCurrency(
-                          islem.odemeler!.reduce((sum, o) => sum + o.tutar, 0)
+                          islem.odemeler!.filter(o => o.islem_durumu === 'AKTIF').reduce((sum, o) => sum + o.tutar, 0)
                         )}
                       </span>
                     </div>
@@ -135,11 +174,11 @@ export default function TransactionList({
               <div className="flex items-center justify-between mb-3 pb-3 border-b border-grid-line">
                 <div>
                   <span className="text-xs text-ink-black/60 uppercase tracking-wide">Tutar</span>
-                  <p className={`text-xl font-mono font-bold ${isPaid && isDebt ? 'line-through text-ink-black/40' : textColor}`}>
+                  <p className={`text-xl font-mono font-bold ${isIptal || (isPaid && isDebt) ? 'line-through text-ink-black/40' : textColor}`}>
                     {isDebt ? '+' : '-'}{formatCurrency(islem.tutar)}
                   </p>
                 </div>
-                {isDebt && (
+                {isDebt && !isIptal && (
                   <div className="text-right">
                     <span className="text-xs text-ink-black/60 uppercase tracking-wide">Kalan</span>
                     <p className={`text-xl font-mono font-bold ${kalanBorc > 0 ? 'text-debt-red' : 'text-payment-green'}`}>
@@ -150,29 +189,40 @@ export default function TransactionList({
                 )}
               </div>
 
-              {/* İşlem Butonu */}
-              {isDebt && !isPaid && (
-                <button
-                  onClick={() => setSelectedIs(islem)}
-                  className="w-full px-4 py-2 bg-payment-green hover:bg-payment-green/90 text-white rounded-lg font-semibold text-sm transition-colors"
-                >
-                  Ödeme Al
-                </button>
+              {/* İşlem Butonları - Sadece aktif işlemler için */}
+              {!isIptal && (
+                <>
+                  {isDebt && !isPaid && (
+                    <button
+                      onClick={() => setSelectedIs(islem)}
+                      className="w-full px-4 py-2 bg-payment-green hover:bg-payment-green/90 text-white rounded-lg font-semibold text-sm transition-colors"
+                    >
+                      Ödeme Al
+                    </button>
+                  )}
+                  {isPaid && isDebt && (
+                    <div className="text-center text-xs text-payment-green font-semibold">
+                      Tamamlandı
+                    </div>
+                  )}
+
+                  {/* İptal Butonu */}
+                  <button
+                    onClick={() => setIptalConfirm(islem)}
+                    className="w-full mt-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    İptal Et
+                  </button>
+                </>
               )}
-              {isPaid && isDebt && (
-                <div className="text-center text-xs text-payment-green font-semibold">
-                  Tamamlandı
+
+              {/* İptal edilmiş işlemler için bilgi */}
+              {isIptal && (
+                <div className="text-center text-xs text-gray-500 font-medium py-2">
+                  Bu işlem iptal edilmiştir
                 </div>
               )}
-              
-              {/* Silme Butonu */}
-              <button
-                onClick={() => setDeleteConfirm(islem)}
-                className="w-full mt-2 px-4 py-2 bg-debt-red/10 hover:bg-debt-red/20 text-debt-red rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Sil
-              </button>
             </div>
           )
         })}
@@ -185,6 +235,9 @@ export default function TransactionList({
             <tr>
               <th className="px-6 py-4 text-left text-sm font-bold text-ink-black uppercase tracking-wide">
                 Tarih
+              </th>
+              <th className="px-6 py-4 text-left text-sm font-bold text-ink-black uppercase tracking-wide">
+                Durum
               </th>
               <th className="px-6 py-4 text-left text-sm font-bold text-ink-black uppercase tracking-wide">
                 Tip
@@ -204,32 +257,50 @@ export default function TransactionList({
             </tr>
           </thead>
           <tbody className="divide-y divide-grid-line">
-            {islemler.map((islem) => {
+            {filteredIslemler.map((islem) => {
               const isDebt = islem.islem_tipi === 'IS'
               const kalanBorc = islem.kalan_borc || 0
               const isPaid = islem.pozisyon_kapali || kalanBorc <= 0
-              const hasPayments = islem.odemeler && islem.odemeler.length > 0
-              
-              const rowColor = isPaid && isDebt 
-                ? 'bg-payment-green/10' 
-                : isDebt 
-                ? 'bg-debt-red/5' 
-                : 'bg-payment-green/5'
-              
-              const textColor = isPaid && isDebt
-                ? 'text-payment-green'
-                : isDebt 
-                ? 'text-debt-red' 
-                : 'text-payment-green'
-              
+              const hasPayments = islem.odemeler && islem.odemeler.filter(o => o.islem_durumu === 'AKTIF').length > 0
+              const isIptal = islem.islem_durumu === 'IPTAL'
+
+              const rowColor = isIptal
+                ? 'bg-gray-50'
+                : isPaid && isDebt
+                  ? 'bg-payment-green/10'
+                  : isDebt
+                    ? 'bg-debt-red/5'
+                    : 'bg-payment-green/5'
+
+              const textColor = isIptal
+                ? 'text-gray-400'
+                : isPaid && isDebt
+                  ? 'text-payment-green'
+                  : isDebt
+                    ? 'text-debt-red'
+                    : 'text-payment-green'
+
               return (
                 <Fragment key={islem.id}>
-                  <tr className={`${rowColor} hover:bg-accent-blue/5 transition-colors ${isPaid && isDebt ? 'opacity-75' : ''}`}>
+                  <tr className={`${rowColor} hover:bg-accent-blue/5 transition-colors ${isIptal ? 'opacity-60' : ''} ${isPaid && isDebt && !isIptal ? 'opacity-75' : ''}`}>
                     <td className="px-6 py-4 text-sm text-ink-black/60 font-mono whitespace-nowrap">
                       {formatDate(islem.created_at)}
                     </td>
                     <td className="px-6 py-4">
-                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${textColor} font-semibold text-sm`}>
+                      {isIptal ? (
+                        <div className="inline-flex items-center gap-1 px-2 py-1 bg-gray-200 text-gray-600 rounded-full text-xs font-semibold">
+                          <Ban className="w-3 h-3" />
+                          İPTAL
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                          <CheckCircle2 className="w-3 h-3" />
+                          AKTİF
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${textColor} font-semibold text-sm ${isIptal ? 'line-through' : ''}`}>
                         {isDebt ? (
                           <>
                             <TrendingUp className="w-4 h-4" />
@@ -246,20 +317,27 @@ export default function TransactionList({
                     <td className="px-6 py-4 text-ink-black max-w-md">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className={isPaid && isDebt ? 'line-through text-ink-black/60' : ''}>
+                          <span className={isIptal || (isPaid && isDebt) ? 'line-through text-ink-black/60' : ''}>
                             {islem.aciklama}
                           </span>
-                          {isPaid && isDebt && (
+                          {!isIptal && isPaid && isDebt && (
                             <span className="ml-2 inline-flex items-center gap-1 px-2 py-1 bg-payment-green text-white rounded-full text-xs font-bold">
                               <CheckCircle2 className="w-3 h-3" />
                               ÖDENDİ
                             </span>
                           )}
                         </div>
-                        
-                        {hasPayments && (
+
+                        {/* İptal Nedeni */}
+                        {isIptal && islem.iptal_nedeni && (
+                          <div className="mt-1 text-xs text-yellow-700 bg-yellow-50 px-2 py-1 rounded inline-block">
+                            <strong>Neden:</strong> {islem.iptal_nedeni}
+                          </div>
+                        )}
+
+                        {hasPayments && !isIptal && (
                           <div className="mt-2 space-y-1">
-                            {islem.odemeler!.map((odeme) => (
+                            {islem.odemeler!.filter(o => o.islem_durumu === 'AKTIF').map((odeme) => (
                               <div
                                 key={odeme.id}
                                 className="flex items-center gap-2 text-xs text-payment-green/80"
@@ -284,7 +362,7 @@ export default function TransactionList({
                               <span>Toplam Ödenen:</span>
                               <span className="font-mono">
                                 {formatCurrency(
-                                  islem.odemeler!.reduce((sum, o) => sum + o.tutar, 0)
+                                  islem.odemeler!.filter(o => o.islem_durumu === 'AKTIF').reduce((sum, o) => sum + o.tutar, 0)
                                 )}
                               </span>
                             </div>
@@ -292,40 +370,51 @@ export default function TransactionList({
                         )}
                       </div>
                     </td>
-                    <td className={`px-6 py-4 text-right font-mono font-bold text-lg ${isPaid && isDebt ? 'line-through text-ink-black/40' : textColor}`}>
+                    <td className={`px-6 py-4 text-right font-mono font-bold text-lg ${isIptal || (isPaid && isDebt) ? 'line-through text-ink-black/40' : textColor}`}>
                       {isDebt ? '+' : '-'}{formatCurrency(islem.tutar)}
                     </td>
                     <td className="px-6 py-4 text-right font-mono font-bold text-lg">
-                      {isDebt ? (
+                      {isDebt && !isIptal ? (
                         <span className={kalanBorc > 0 ? 'text-debt-red' : 'text-payment-green flex items-center justify-end gap-1'}>
                           {formatCurrency(kalanBorc)}
                           {kalanBorc === 0 && <CheckCircle2 className="w-4 h-4" />}
                         </span>
+                      ) : isIptal ? (
+                        <span className="text-gray-400">-</span>
                       ) : (
                         <span className="text-ink-black/40">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      {isDebt && !isPaid && (
-                        <button
-                          onClick={() => setSelectedIs(islem)}
-                          className="px-4 py-2 bg-payment-green hover:bg-payment-green/90 text-white rounded-lg font-semibold text-sm transition-colors"
-                        >
-                          Ödeme Al
-                        </button>
+                      {!isIptal && (
+                        <>
+                          {isDebt && !isPaid && (
+                            <button
+                              onClick={() => setSelectedIs(islem)}
+                              className="px-4 py-2 bg-payment-green hover:bg-payment-green/90 text-white rounded-lg font-semibold text-sm transition-colors"
+                            >
+                              Ödeme Al
+                            </button>
+                          )}
+                          {isPaid && isDebt && (
+                            <span className="text-xs text-payment-green font-semibold">
+                              Tamamlandı
+                            </span>
+                          )}
+                          <button
+                            onClick={() => setIptalConfirm(islem)}
+                            className="ml-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-semibold text-sm transition-colors inline-flex items-center gap-1"
+                            title="İşlemi İptal Et"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        </>
                       )}
-                      {isPaid && isDebt && (
-                        <span className="text-xs text-payment-green font-semibold">
-                          Tamamlandı
+                      {isIptal && (
+                        <span className="text-xs text-gray-500">
+                          İptal edildi
                         </span>
                       )}
-                      <button
-                        onClick={() => setDeleteConfirm(islem)}
-                        className="ml-2 px-3 py-2 bg-debt-red/10 hover:bg-debt-red/20 text-debt-red rounded-lg font-semibold text-sm transition-colors inline-flex items-center gap-1"
-                        title="İşlemi Sil"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </td>
                   </tr>
                 </Fragment>
@@ -343,30 +432,35 @@ export default function TransactionList({
         />
       )}
 
-      {/* Silme Onay Modalı */}
-      {deleteConfirm && (
+      {/* İptal Onay Modalı */}
+      {iptalConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full border-2 border-debt-red shadow-xl">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full border-2 border-gray-300 shadow-xl">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-debt-red/10 flex items-center justify-center">
-                <Trash2 className="w-6 h-6 text-debt-red" />
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                <XCircle className="w-6 h-6 text-gray-600" />
               </div>
               <h2 className="text-2xl font-mono font-bold text-ink-black">
-                İşlemi Sil
+                İşlemi İptal Et
               </h2>
             </div>
 
-            <div className="mb-6 space-y-3">
+            <div className="mb-6 space-y-4">
               <p className="text-ink-black">
-                Bu işlemi <strong>kalıcı olarak</strong> silmek istediğinize emin misiniz?
+                Bu işlemi <strong>iptal etmek</strong> istediğinize emin misiniz?
               </p>
-              
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  ℹ️ İptal edilen işlemler silinmez, sadece &quot;iptal edildi&quot; olarak işaretlenir ve bakiye hesaplamalarından çıkarılır.
+                </p>
+              </div>
+
               <div className="bg-gray-50 border-2 border-grid-line rounded-lg p-4 space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
-                    deleteConfirm.islem_tipi === 'IS' ? 'text-debt-red' : 'text-payment-green'
-                  }`}>
-                    {deleteConfirm.islem_tipi === 'IS' ? (
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${iptalConfirm.islem_tipi === 'IS' ? 'text-debt-red' : 'text-payment-green'
+                    }`}>
+                    {iptalConfirm.islem_tipi === 'IS' ? (
                       <>
                         <TrendingUp className="w-3 h-3" />
                         İş
@@ -379,44 +473,57 @@ export default function TransactionList({
                     )}
                   </span>
                   <span className="text-xs text-ink-black/60 font-mono">
-                    {formatDate(deleteConfirm.created_at)}
+                    {formatDate(iptalConfirm.created_at)}
                   </span>
                 </div>
-                <p className="text-sm text-ink-black">{deleteConfirm.aciklama}</p>
+                <p className="text-sm text-ink-black">{iptalConfirm.aciklama}</p>
                 <p className="text-lg font-mono font-bold text-ink-black">
-                  {deleteConfirm.islem_tipi === 'IS' ? '+' : '-'}{formatCurrency(deleteConfirm.tutar)}
+                  {iptalConfirm.islem_tipi === 'IS' ? '+' : '-'}{formatCurrency(iptalConfirm.tutar)}
                 </p>
-                {deleteConfirm.islem_tipi === 'IS' && deleteConfirm.odemeler && deleteConfirm.odemeler.length > 0 && (
-                  <p className="text-xs text-debt-red font-semibold">
-                    ⚠️ Bu işe ait {deleteConfirm.odemeler.length} ödeme kaydı da silinecek
+                {iptalConfirm.islem_tipi === 'IS' && iptalConfirm.odemeler && iptalConfirm.odemeler.filter(o => o.islem_durumu === 'AKTIF').length > 0 && (
+                  <p className="text-xs text-yellow-700 bg-yellow-50 px-2 py-1 rounded">
+                    ⚠️ Bu işe ait {iptalConfirm.odemeler.filter(o => o.islem_durumu === 'AKTIF').length} ödeme kaydı da iptal edilecek
                   </p>
                 )}
               </div>
 
-              <p className="text-sm text-ink-black/60">
-                Bu işlem geri alınamaz. Toplam borç hesaplamaları otomatik olarak güncellenecektir.
-              </p>
+              {/* İptal Nedeni - OPSİYONEL */}
+              <div>
+                <label className="block text-sm font-semibold text-ink-black mb-2">
+                  İptal Nedeni <span className="text-ink-black/40 text-xs font-normal">(opsiyonel)</span>
+                </label>
+                <input
+                  type="text"
+                  value={iptalNedeni}
+                  onChange={(e) => setIptalNedeni(e.target.value)}
+                  placeholder="Örn: Hatalı giriş, Müşteri vazgeçti..."
+                  className="w-full px-4 py-3 border-2 border-grid-line rounded-lg focus:outline-none focus:border-accent-blue"
+                />
+              </div>
             </div>
 
             <div className="flex gap-3">
               <button
-                onClick={() => setDeleteConfirm(null)}
-                disabled={isDeleting}
+                onClick={() => {
+                  setIptalConfirm(null)
+                  setIptalNedeni('')
+                }}
+                disabled={isIptalEtme}
                 className="flex-1 px-4 py-3 border-2 border-grid-line text-ink-black rounded-lg font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
-                İptal
+                Vazgeç
               </button>
               <button
-                onClick={() => handleDelete(deleteConfirm)}
-                disabled={isDeleting}
+                onClick={() => handleIptal(iptalConfirm)}
+                disabled={isIptalEtme}
                 className="flex-1 px-4 py-3 bg-debt-red hover:bg-debt-red/90 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {isDeleting ? (
-                  'Siliniyor...'
+                {isIptalEtme ? (
+                  'İptal Ediliyor...'
                 ) : (
                   <>
-                    <Trash2 className="w-4 h-4" />
-                    Sil
+                    <XCircle className="w-4 h-4" />
+                    İptal Et
                   </>
                 )}
               </button>

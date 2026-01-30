@@ -10,18 +10,19 @@ export default async function HomePage({
 }) {
   const params = await searchParams
   const supabase = await createServerSupabaseClient()
-  
-  // son_islem_tarihi null ise created_at kullan, böylece yeni tamirciler de üstte görünür
+
+  // Sadece aktif (silinmemiş) tamircileri getir
   let query = supabase
     .from('tamirciler')
     .select('*')
-  
+    .eq('is_active', true) // Sadece aktif olanlar
+
   if (params.q) {
     query = query.ilike('ad_soyad', `%${params.q}%`)
   }
-  
+
   let { data: tamirciler } = await query
-  
+
   // Client-side sıralama: son_islem_tarihi varsa onu, yoksa created_at kullan
   if (tamirciler) {
     tamirciler = tamirciler.sort((a, b) => {
@@ -30,7 +31,7 @@ export default async function HomePage({
       return new Date(dateB).getTime() - new Date(dateA).getTime()
     })
   }
-  
+
   return (
     <main className="min-h-screen p-4 sm:p-6 md:p-8 bg-ledger-paper">
       <div className="max-w-7xl mx-auto">
@@ -42,14 +43,14 @@ export default async function HomePage({
             Tamirci borç-alacak takibi
           </p>
         </header>
-        
+
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="flex-1">
             <SearchBar initialValue={params.q} />
           </div>
           <AddCustomerButton />
         </div>
-        
+
         {tamirciler && tamirciler.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {tamirciler.map((tamirci) => (
