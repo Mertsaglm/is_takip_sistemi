@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, ReactNode } from 'react'
 import Fuse from 'fuse.js'
-import { Search } from 'lucide-react'
+import { Search, Eye, EyeOff } from 'lucide-react'
 import CustomerCard from './customer-card'
 import { Tamirci } from '@/types/database'
 
@@ -67,6 +67,7 @@ interface TamircilerContainerProps {
 export default function TamircilerContainer({ tamirciler, addButton }: TamircilerContainerProps) {
     const [searchQuery, setSearchQuery] = useState('')
     const [isPending, setIsPending] = useState(false)
+    const [hideBorclar, setHideBorclar] = useState(false)
     const inputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
@@ -111,9 +112,9 @@ export default function TamircilerContainer({ tamirciler, addButton }: Tamircile
 
     return (
         <>
-            {/* Search Bar + Add Button */}
+            {/* Search Bar + Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
-                <div className="flex-1 relative">
+                <div key="search" className="flex-1 relative">
                     <Search className="absolute left-3 sm:left-4 md:left-6 top-1/2 -translate-y-1/2 text-ink-black/40 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 z-10" />
                     <input
                         ref={inputRef}
@@ -130,7 +131,27 @@ export default function TamircilerContainer({ tamirciler, addButton }: Tamircile
                         </div>
                     )}
                 </div>
-                {addButton}
+                <button
+                    key="toggle-hide"
+                    onClick={() => setHideBorclar(!hideBorclar)}
+                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-4 md:py-5 bg-white border-2 border-grid-line rounded-lg hover:border-accent-blue hover:bg-accent-blue/5 transition-all font-mono text-base sm:text-lg font-semibold text-ink-black shadow-sm"
+                    title={hideBorclar ? 'Borçları Göster' : 'Borçları Gizle'}
+                >
+                    {hideBorclar ? (
+                        <>
+                            <EyeOff className="w-5 h-5 sm:w-6 sm:h-6" />
+                            <span className="hidden sm:inline">Gizli</span>
+                        </>
+                    ) : (
+                        <>
+                            <Eye className="w-5 h-5 sm:w-6 sm:h-6" />
+                            <span className="hidden sm:inline">Görünür</span>
+                        </>
+                    )}
+                </button>
+                <div key="add-button">
+                    {addButton}
+                </div>
             </div>
 
             {/* Arama ipucu */}
@@ -163,6 +184,7 @@ export default function TamircilerContainer({ tamirciler, addButton }: Tamircile
                             key={tamirci.id}
                             tamirci={tamirci}
                             highlightText={searchQuery.length >= 2 ? searchQuery : undefined}
+                            hideBakiye={hideBorclar}
                         />
                     ))}
                 </div>

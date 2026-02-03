@@ -59,9 +59,10 @@ function highlightMatch(text: string, query: string): React.ReactNode {
 interface CustomerCardProps {
   tamirci: Tamirci
   highlightText?: string
+  hideBakiye?: boolean
 }
 
-export default function CustomerCard({ tamirci, highlightText }: CustomerCardProps) {
+export default function CustomerCard({ tamirci, highlightText, hideBakiye = false }: CustomerCardProps) {
   const [showConfirm, setShowConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const bakiye = tamirci.toplam_borc
@@ -126,7 +127,7 @@ export default function CustomerCard({ tamirci, highlightText }: CustomerCardPro
         <div className="flex items-baseline justify-between pt-3 sm:pt-4 border-t border-grid-line">
           <span className="text-xs sm:text-sm text-ink-black/60 font-semibold uppercase tracking-wide">{label}</span>
           <span className={`text-2xl sm:text-3xl font-mono font-bold ${borcColor}`}>
-            {formatCurrency(displayAmount)}
+            {hideBakiye ? '₺****' : formatCurrency(displayAmount)}
           </span>
         </div>
 
