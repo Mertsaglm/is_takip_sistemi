@@ -67,7 +67,7 @@ interface TamircilerContainerProps {
 export default function TamircilerContainer({ tamirciler, addButton }: TamircilerContainerProps) {
     const [searchQuery, setSearchQuery] = useState('')
     const [isPending, setIsPending] = useState(false)
-    const [hideBorclar, setHideBorclar] = useState(false)
+    const [hideBorclar, setHideBorclar] = useState(true)
     const inputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
