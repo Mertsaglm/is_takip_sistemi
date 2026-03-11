@@ -99,8 +99,8 @@ export async function updateIslem(islemId: string, tamirciId: string, formData: 
   if (mevcutIslem.islem_tipi === 'IS') {
     // İş işlemi için: kalan borcu ve toplam borcu güncelle
     const toplamOdenen = mevcutIslem.odemeler
-      ?.filter(o => o.islem_durumu === 'AKTIF')
-      .reduce((sum, o) => sum + o.tutar, 0) || 0
+      ?.filter((o: { islem_durumu: string }) => o.islem_durumu === 'AKTIF')
+      .reduce((sum: number, o: { tutar: number }) => sum + o.tutar, 0) || 0
     
     yeniKalanBorc = Math.max(0, yeniTutar - toplamOdenen)
     yeniToplamBorc = tamirci.toplam_borc + tutarFarki
