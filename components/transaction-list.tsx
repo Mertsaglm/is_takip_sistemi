@@ -1,11 +1,13 @@
 'use client'
 
-import { Islem } from '@/types/database'
+import { Islem, IsOdemesi } from '@/types/database'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { TrendingUp, TrendingDown, CheckCircle2, XCircle, Ban } from 'lucide-react'
 import { useState, Fragment } from 'react'
 import IsPaymentModal from './is-payment-modal'
-import { iptalTransaction } from '@/app/actions'
+import EditTransactionModal from './edit-transaction-modal'
+import EditPaymentModal from './edit-payment-modal'
+import { iptalTransaction, iptalOdeme } from '@/app/actions'
 
 export default function TransactionList({
   islemler,
@@ -17,7 +19,10 @@ export default function TransactionList({
   showIptalEdilen?: boolean
 }) {
   const [selectedIs, setSelectedIs] = useState<Islem | null>(null)
+  const [editingIslem, setEditingIslem] = useState<Islem | null>(null)
+  const [editingOdeme, setEditingOdeme] = useState<{ odeme: IsOdemesi; islem: Islem } | null>(null)
   const [iptalConfirm, setIptalConfirm] = useState<Islem | null>(null)
+  const [iptalOdemeConfirm, setIptalOdemeConfirm] = useState<{ odeme: IsOdemesi; islem: Islem } | null>(null)
   const [iptalNedeni, setIptalNedeni] = useState('')
   const [isIptalEtme, setIsIptalEtme] = useState(false)
 
@@ -36,6 +41,20 @@ export default function TransactionList({
     } catch (error) {
       console.error('İptal hatası:', error)
       alert('İşlem iptal edilirken hata oluştu')
+    } finally {
+      setIsIptalEtme(false)
+    }
+  }
+
+  async function handleIptalOdeme(odeme: IsOdemesi, islem: Islem) {
+    setIsIptalEtme(true)
+    try {
+      await iptalOdeme(odeme.id, islem.id, tamirciId, iptalNedeni || '')
+      setIptalOdemeConfirm(null)
+      setIptalNedeni('')
+    } catch (error) {
+      console.error('Ödeme iptal hatası:', error)
+      alert('Ödeme iptal edilirken hata oluştu')
     } finally {
       setIsIptalEtme(false)
     }
@@ -142,20 +161,34 @@ export default function TransactionList({
                 {hasPayments && !isIptal && (
                   <div className="mt-2 space-y-1">
                     {islem.odemeler!.filter(o => o.islem_durumu === 'AKTIF').map((odeme) => (
-                      <div
-                        key={odeme.id}
-                        className="flex items-center gap-2 text-xs text-payment-green/80"
-                      >
-                        <TrendingDown className="w-3 h-3" />
-                        <span className="font-mono font-semibold">
-                          {formatCurrency(odeme.tutar)}
-                        </span>
-                        {odeme.aciklama && (
-                          <>
-                            <span className="text-ink-black/40">•</span>
-                            <span className="text-ink-black/60">{odeme.aciklama}</span>
-                          </>
-                        )}
+                      <div key={odeme.id} className="space-y-1">
+                        <div className="flex items-center gap-2 text-xs text-payment-green/80">
+                          <TrendingDown className="w-3 h-3" />
+                          <span className="font-mono font-semibold">
+                            {formatCurrency(odeme.tutar)}
+                          </span>
+                          {odeme.aciklama && (
+                            <>
+                              <span className="text-ink-black/40">•</span>
+                              <span className="text-ink-black/60">{odeme.aciklama}</span>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex gap-1 ml-5">
+                          <button
+                            onClick={() => setEditingOdeme({ odeme, islem })}
+                            className="px-2 py-1 bg-accent-blue hover:bg-accent-blue/90 text-white rounded text-xs"
+                          >
+                            Düzenle
+                          </button>
+                          <button
+                            onClick={() => setIptalOdemeConfirm({ odeme, islem })}
+                            className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-xs flex items-center gap-1"
+                          >
+                            <XCircle className="w-3 h-3" />
+                            İptal
+                          </button>
+                        </div>
                       </div>
                     ))}
                     <div className="flex items-center gap-2 text-xs font-semibold text-payment-green pt-1 border-t border-payment-green/20">
@@ -206,14 +239,22 @@ export default function TransactionList({
                     </div>
                   )}
 
-                  {/* İptal Butonu */}
-                  <button
-                    onClick={() => setIptalConfirm(islem)}
-                    className="w-full mt-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-                  >
-                    <XCircle className="w-4 h-4" />
-                    İptal Et
-                  </button>
+                  {/* Düzenle ve İptal Butonları */}
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => setEditingIslem(islem)}
+                      className="flex-1 px-4 py-2 bg-accent-blue hover:bg-accent-blue/90 text-white rounded-lg font-semibold text-sm transition-colors"
+                    >
+                      Düzenle
+                    </button>
+                    <button
+                      onClick={() => setIptalConfirm(islem)}
+                      className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                    >
+                      <XCircle className="w-4 h-4" />
+                      İptal Et
+                    </button>
+                  </div>
                 </>
               )}
 
@@ -338,24 +379,38 @@ export default function TransactionList({
                         {hasPayments && !isIptal && (
                           <div className="mt-2 space-y-1">
                             {islem.odemeler!.filter(o => o.islem_durumu === 'AKTIF').map((odeme) => (
-                              <div
-                                key={odeme.id}
-                                className="flex items-center gap-2 text-xs text-payment-green/80"
-                              >
-                                <TrendingDown className="w-3 h-3" />
-                                <span className="font-mono font-semibold">
-                                  {formatCurrency(odeme.tutar)}
-                                </span>
-                                {odeme.aciklama && (
-                                  <>
-                                    <span className="text-ink-black/40">•</span>
-                                    <span className="text-ink-black/60">{odeme.aciklama}</span>
-                                  </>
-                                )}
-                                <span className="text-ink-black/40">•</span>
-                                <span className="text-ink-black/40 font-mono">
-                                  {formatDate(odeme.created_at)}
-                                </span>
+                              <div key={odeme.id} className="space-y-1">
+                                <div className="flex items-center gap-2 text-xs text-payment-green/80">
+                                  <TrendingDown className="w-3 h-3" />
+                                  <span className="font-mono font-semibold">
+                                    {formatCurrency(odeme.tutar)}
+                                  </span>
+                                  {odeme.aciklama && (
+                                    <>
+                                      <span className="text-ink-black/40">•</span>
+                                      <span className="text-ink-black/60">{odeme.aciklama}</span>
+                                    </>
+                                  )}
+                                  <span className="text-ink-black/40">•</span>
+                                  <span className="text-ink-black/40 font-mono">
+                                    {formatDate(odeme.created_at)}
+                                  </span>
+                                </div>
+                                <div className="flex gap-1 ml-5">
+                                  <button
+                                    onClick={() => setEditingOdeme({ odeme, islem })}
+                                    className="px-2 py-1 bg-accent-blue hover:bg-accent-blue/90 text-white rounded text-xs"
+                                  >
+                                    Düzenle
+                                  </button>
+                                  <button
+                                    onClick={() => setIptalOdemeConfirm({ odeme, islem })}
+                                    className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-xs flex items-center gap-1"
+                                  >
+                                    <XCircle className="w-3 h-3" />
+                                    İptal
+                                  </button>
+                                </div>
                               </div>
                             ))}
                             <div className="flex items-center gap-2 text-xs font-semibold text-payment-green pt-1 border-t border-payment-green/20">
@@ -402,6 +457,13 @@ export default function TransactionList({
                             </span>
                           )}
                           <button
+                            onClick={() => setEditingIslem(islem)}
+                            className="ml-2 px-3 py-2 bg-accent-blue hover:bg-accent-blue/90 text-white rounded-lg font-semibold text-sm transition-colors"
+                            title="İşlemi Düzenle"
+                          >
+                            Düzenle
+                          </button>
+                          <button
                             onClick={() => setIptalConfirm(islem)}
                             className="ml-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-semibold text-sm transition-colors inline-flex items-center gap-1"
                             title="İşlemi İptal Et"
@@ -429,6 +491,24 @@ export default function TransactionList({
           islem={selectedIs}
           tamirciId={tamirciId}
           onClose={() => setSelectedIs(null)}
+        />
+      )}
+
+      {editingIslem && (
+        <EditTransactionModal
+          islem={editingIslem}
+          tamirciId={tamirciId}
+          onClose={() => setEditingIslem(null)}
+        />
+      )}
+
+      {editingOdeme && (
+        <EditPaymentModal
+          odeme={editingOdeme.odeme}
+          isId={editingOdeme.islem.id}
+          tamirciId={tamirciId}
+          maxTutar={(editingOdeme.islem.kalan_borc || 0) + editingOdeme.odeme.tutar}
+          onClose={() => setEditingOdeme(null)}
         />
       )}
 
@@ -515,6 +595,96 @@ export default function TransactionList({
               </button>
               <button
                 onClick={() => handleIptal(iptalConfirm)}
+                disabled={isIptalEtme}
+                className="flex-1 px-4 py-3 bg-debt-red hover:bg-debt-red/90 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isIptalEtme ? (
+                  'İptal Ediliyor...'
+                ) : (
+                  <>
+                    <XCircle className="w-4 h-4" />
+                    İptal Et
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ödeme İptal Onay Modalı */}
+      {iptalOdemeConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full border-2 border-gray-300 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                <XCircle className="w-6 h-6 text-gray-600" />
+              </div>
+              <h2 className="text-2xl font-mono font-bold text-ink-black">
+                Ödemeyi İptal Et
+              </h2>
+            </div>
+
+            <div className="mb-6 space-y-4">
+              <p className="text-ink-black">
+                Bu ödemeyi <strong>iptal etmek</strong> istediğinize emin misiniz?
+              </p>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  ℹ️ İptal edilen ödemeler silinmez, sadece &quot;iptal edildi&quot; olarak işaretlenir ve işin kalan borcuna geri eklenir.
+                </p>
+              </div>
+
+              <div className="bg-gray-50 border-2 border-grid-line rounded-lg p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold text-payment-green">
+                    <TrendingDown className="w-3 h-3" />
+                    Ödeme
+                  </span>
+                  <span className="text-xs text-ink-black/60 font-mono">
+                    {formatDate(iptalOdemeConfirm.odeme.created_at)}
+                  </span>
+                </div>
+                {iptalOdemeConfirm.odeme.aciklama && (
+                  <p className="text-sm text-ink-black">{iptalOdemeConfirm.odeme.aciklama}</p>
+                )}
+                <p className="text-lg font-mono font-bold text-ink-black">
+                  {formatCurrency(iptalOdemeConfirm.odeme.tutar)}
+                </p>
+                <p className="text-xs text-yellow-700 bg-yellow-50 px-2 py-1 rounded">
+                  ⚠️ Bu tutar işin kalan borcuna geri eklenecek
+                </p>
+              </div>
+
+              {/* İptal Nedeni - OPSİYONEL */}
+              <div>
+                <label className="block text-sm font-semibold text-ink-black mb-2">
+                  İptal Nedeni <span className="text-ink-black/40 text-xs font-normal">(opsiyonel)</span>
+                </label>
+                <input
+                  type="text"
+                  value={iptalNedeni}
+                  onChange={(e) => setIptalNedeni(e.target.value)}
+                  placeholder="Örn: Hatalı giriş, Yanlış tutar..."
+                  className="w-full px-4 py-3 border-2 border-grid-line rounded-lg focus:outline-none focus:border-accent-blue"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setIptalOdemeConfirm(null)
+                  setIptalNedeni('')
+                }}
+                disabled={isIptalEtme}
+                className="flex-1 px-4 py-3 border-2 border-grid-line text-ink-black rounded-lg font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Vazgeç
+              </button>
+              <button
+                onClick={() => handleIptalOdeme(iptalOdemeConfirm.odeme, iptalOdemeConfirm.islem)}
                 disabled={isIptalEtme}
                 className="flex-1 px-4 py-3 bg-debt-red hover:bg-debt-red/90 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >

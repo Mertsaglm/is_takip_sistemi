@@ -61,6 +61,81 @@ export async function addIslem(tamirciId: string, formData: FormData) {
   revalidatePath('/')
 }
 
+export async function updateIslem(islemId: string, tamirciId: string, formData: FormData) {
+  const supabase = await createServerSupabaseClient()
+
+  // Mevcut işlemi al
+  const { data: mevcutIslem, error: fetchError } = await supabase
+    .from('islem_gecmisi')
+    .select('*, odemeler:is_odemeleri(*)')
+    .eq('id', islemId)
+    .single()
+
+  if (fetchError || !mevcutIslem) throw new Error('İşlem bulunamadı')
+
+  // İptal edilmiş işlemler düzenlenemez
+  if (mevcutIslem.islem_durumu === 'IPTAL') {
+    throw new Error('İptal edilmiş işlemler düzenlenemez')
+  }
+
+  const yeniTutar = parseFloat(formData.get('tutar') as string)
+  const yeniAciklama = formData.get('aciklama') as string
+  const eskiTutar = mevcutIslem.tutar
+  const tutarFarki = yeniTutar - eskiTutar
+
+  // Tamircinin mevcut toplam borcunu al
+  const { data: tamirci, error: tamirciError } = await supabase
+    .from('tamirciler')
+    .select('toplam_borc')
+    .eq('id', tamirciId)
+    .single()
+
+  if (tamirciError || !tamirci) throw new Error('Tamirci bulunamadı')
+
+  // Yeni toplam borcu hesapla
+  let yeniToplamBorc = tamirci.toplam_borc
+  let yeniKalanBorc = mevcutIslem.kalan_borc || 0
+
+  if (mevcutIslem.islem_tipi === 'IS') {
+    // İş işlemi için: kalan borcu ve toplam borcu güncelle
+    const toplamOdenen = mevcutIslem.odemeler
+      ?.filter(o => o.islem_durumu === 'AKTIF')
+      .reduce((sum, o) => sum + o.tutar, 0) || 0
+    
+    yeniKalanBorc = Math.max(0, yeniTutar - toplamOdenen)
+    yeniToplamBorc = tamirci.toplam_borc + tutarFarki
+  } else {
+    // Ödeme işlemi için: sadece toplam borcu güncelle (ters yönde)
+    yeniToplamBorc = tamirci.toplam_borc - tutarFarki
+  }
+
+  // İşlemi güncelle
+  const { error: updateError } = await supabase
+    .from('islem_gecmisi')
+    .update({
+      aciklama: yeniAciklama,
+      tutar: yeniTutar,
+      kalan_borc: mevcutIslem.islem_tipi === 'IS' ? yeniKalanBorc : null,
+      pozisyon_kapali: mevcutIslem.islem_tipi === 'IS' ? yeniKalanBorc === 0 : mevcutIslem.pozisyon_kapali
+    })
+    .eq('id', islemId)
+
+  if (updateError) throw updateError
+
+  // Tamircinin toplam borcunu güncelle
+  const { error: borcUpdateError } = await supabase
+    .from('tamirciler')
+    .update({ toplam_borc: yeniToplamBorc })
+    .eq('id', tamirciId)
+
+  if (borcUpdateError) throw borcUpdateError
+
+  revalidatePath(`/tamirci/${tamirciId}`)
+  revalidatePath('/')
+
+  return { success: true, yeniToplamBorc }
+}
+
 export async function addIsOdemesi(isId: string, tamirciId: string, formData: FormData) {
   const supabase = await createServerSupabaseClient()
 
@@ -116,6 +191,82 @@ export async function addIsOdemesi(isId: string, tamirciId: string, formData: Fo
 
   revalidatePath(`/tamirci/${tamirciId}`)
   revalidatePath('/')
+}
+
+export async function updateIsOdemesi(odemeId: string, isId: string, tamirciId: string, formData: FormData) {
+  const supabase = await createServerSupabaseClient()
+
+  // Mevcut ödemeyi al
+  const { data: mevcutOdeme, error: fetchError } = await supabase
+    .from('is_odemeleri')
+    .select('*')
+    .eq('id', odemeId)
+    .single()
+
+  if (fetchError || !mevcutOdeme) throw new Error('Ödeme bulunamadı')
+
+  // İptal edilmiş ödemeler düzenlenemez
+  if (mevcutOdeme.islem_durumu === 'IPTAL') {
+    throw new Error('İptal edilmiş ödemeler düzenlenemez')
+  }
+
+  const yeniTutar = parseFloat(formData.get('tutar') as string)
+  const yeniAciklama = formData.get('aciklama') as string
+  const eskiTutar = mevcutOdeme.tutar
+  const tutarFarki = yeniTutar - eskiTutar
+
+  // İşin mevcut kalan borcunu al
+  const { data: is, error: isError } = await supabase
+    .from('islem_gecmisi')
+    .select('kalan_borc, tutar')
+    .eq('id', isId)
+    .single()
+
+  if (isError || !is) throw new Error('İş bulunamadı')
+
+  // Yeni kalan borcu hesapla (ödeme artarsa borç azalır, azalırsa borç artar)
+  const yeniKalanBorc = Math.max(0, (is.kalan_borc || 0) - tutarFarki)
+
+  // Ödemeyi güncelle
+  const { error: updateError } = await supabase
+    .from('is_odemeleri')
+    .update({
+      tutar: yeniTutar,
+      aciklama: yeniAciklama || null
+    })
+    .eq('id', odemeId)
+
+  if (updateError) throw updateError
+
+  // İşin kalan borcunu güncelle
+  const { error: isUpdateError } = await supabase
+    .from('islem_gecmisi')
+    .update({
+      kalan_borc: yeniKalanBorc,
+      pozisyon_kapali: yeniKalanBorc === 0
+    })
+    .eq('id', isId)
+
+  if (isUpdateError) throw isUpdateError
+
+  // Tamircinin toplam borcunu güncelle (ödeme artarsa borç azalır)
+  const { data: tamirci } = await supabase
+    .from('tamirciler')
+    .select('toplam_borc')
+    .eq('id', tamirciId)
+    .single()
+
+  if (tamirci) {
+    await supabase
+      .from('tamirciler')
+      .update({ toplam_borc: tamirci.toplam_borc - tutarFarki })
+      .eq('id', tamirciId)
+  }
+
+  revalidatePath(`/tamirci/${tamirciId}`)
+  revalidatePath('/')
+
+  return { success: true }
 }
 
 export async function kapaPozisyon(isId: string, tamirciId: string) {

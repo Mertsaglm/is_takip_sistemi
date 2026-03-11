@@ -222,12 +222,22 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION sync_islemler_detay_func()
 RETURNS TRIGGER AS $$
 BEGIN
-  IF OLD.islem_durumu IS DISTINCT FROM NEW.islem_durumu THEN
+  -- İşlem durumu, iptal bilgileri, açıklama veya tutar değiştiğinde güncelle
+  IF OLD.islem_durumu IS DISTINCT FROM NEW.islem_durumu 
+     OR OLD.iptal_nedeni IS DISTINCT FROM NEW.iptal_nedeni
+     OR OLD.iptal_tarihi IS DISTINCT FROM NEW.iptal_tarihi
+     OR OLD.aciklama IS DISTINCT FROM NEW.aciklama
+     OR OLD.tutar IS DISTINCT FROM NEW.tutar
+     OR OLD.kalan_borc IS DISTINCT FROM NEW.kalan_borc THEN
+    
     UPDATE islemler_detay
     SET 
       islem_durumu = NEW.islem_durumu,
       iptal_nedeni = NEW.iptal_nedeni,
-      iptal_tarihi = NEW.iptal_tarihi
+      iptal_tarihi = NEW.iptal_tarihi,
+      aciklama = NEW.aciklama,
+      tutar = NEW.tutar,
+      kalan_borc = NEW.kalan_borc
     WHERE islem_id = NEW.id;
   END IF;
   RETURN NEW;
